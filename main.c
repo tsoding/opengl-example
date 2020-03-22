@@ -62,6 +62,11 @@ GLuint gl_create_and_link_program(GLuint vertex_shader, GLuint fragment_shader)
     return program;
 }
 
+void window_size_callback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
+
 int main(int argc, char *argv[])
 {
     if (!glfwInit()) {
@@ -80,6 +85,8 @@ int main(int argc, char *argv[])
     }
 
     glfwMakeContextCurrent(window);
+
+    glfwSetWindowSizeCallback(window, window_size_callback);
 
     float mesh[6][4] = {
         // position,    texcoord
