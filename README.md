@@ -1,4 +1,4 @@
-# OpenGL
+# OpenGL Example
 
 Was just checking out OpenGL
 
