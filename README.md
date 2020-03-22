@@ -6,5 +6,5 @@ Was just checking out OpenGL
 
 ```console
 $ make
-$ ./opengl
+$ ./opengl-example
 ```
