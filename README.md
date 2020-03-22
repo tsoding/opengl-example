@@ -1,6 +1,6 @@
 # OpenGL Example
 
-Was just checking out OpenGL
+Was just checking out OpenGL. Nothing special.
 
 ## Dependencies
 
