@@ -1,5 +1,8 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLFW/glfw3.h>
@@ -18,8 +21,61 @@ const char *gl_shader_type_as_cstr(GLenum shader_type)
     }
 }
 
-GLuint gl_create_and_compile_shader(GLenum shader_type, const char *source)
+const char *file_as_cstr(const char *filepath)
 {
+    assert(filepath);
+
+    size_t n = 0;
+    FILE *f = fopen(filepath, "rb");
+    if (!f) {
+        fprintf(stderr, "Could not open file `%s`: %s\n", filepath,
+                strerror(errno));
+        abort();
+    }
+
+    int code = fseek(f, 0, SEEK_END);
+    if (code < 0) {
+        fprintf(stderr, "Could find the end of file %s: %s\n", filepath,
+                strerror(errno));
+        abort();
+    }
+
+    long m = ftell(f);
+    if (m < 0) {
+        fprintf(stderr, "Could get the end of file %s: %s\n", filepath,
+                strerror(errno));
+        abort();
+    }
+    size_t count = (size_t) m;
+
+    code = fseek(f, 0, SEEK_SET);
+    if (code < 0) {
+        fprintf(stderr, "Could not find the beginning of file %s: %s\n", filepath,
+                strerror(errno));
+        abort();
+    }
+
+    char *buffer = calloc(1, count + 1);
+    if (!buffer) {
+        fprintf(stderr, "Could not allocate memory for file %s: %s\n", filepath,
+                strerror(errno));
+        abort();
+    }
+
+    n = fread(buffer, 1, count, f);
+    if (n != count) {
+        fprintf(stderr, "Could not read file %s: %s\n", filepath,
+                strerror(errno));
+        abort();
+    }
+
+    return buffer;
+}
+
+GLuint gl_create_and_compile_shader(GLenum shader_type, const char *file_path)
+{
+    const char *source = file_as_cstr(file_path);
+
     GLuint shader = glCreateShader(shader_type);
     glShaderSource(shader, 1, &source, NULL);
     glCompileShader(shader);
@@ -31,9 +87,26 @@ GLuint gl_create_and_compile_shader(GLenum shader_type, const char *source)
         GLsizei log_length = 0;
         GLchar message[MESSAGE_CAPACITY];
         glGetShaderInfoLog(shader, MESSAGE_CAPACITY, &log_length, message);
-        fprintf(stderr, "%s failed compilation: %.*s",
-                gl_shader_type_as_cstr(shader_type),
-                log_length, message);
+
+        // FIXME: This is hackish Kapp
+        int q = 0;
+        for (int i = 0; i < log_length; ++i) {
+            if (!q) {
+                if (message[i] == '(') {
+                    message[i] = ':';
+                    q = 1;
+                }
+            } else {
+                if (message[i] == ')') {
+                    message[i] = ' ';
+                    break;
+                }
+                message[i] = ' ';
+            }
+        }
+
+        fprintf(stderr, "%s failed compiled:\n", gl_shader_type_as_cstr(shader_type));
+        fprintf(stderr, "%s:%.*s", file_path, log_length - 2, message + 2);
         abort();
     }
 
@@ -62,10 +135,14 @@ GLuint gl_create_and_link_program(GLuint vertex_shader, GLuint fragment_shader)
     return program;
 }
 
-void window_size_callback(GLFWwindow* window, int width, int height)
+void window_size_callback(GLFWwindow* window,
+                          int width, int height)
 {
     glViewport(0, 0, width, height);
 }
+
+#define VERTEX_FILE_PATH "shader.vert"
+#define FRAGMENT_FILE_PATH "shader.frag"
 
 int main(int argc, char *argv[])
 {
@@ -157,52 +234,11 @@ int main(int argc, char *argv[])
 
     // SHADERS
     GLuint vertex_shader = gl_create_and_compile_shader(
-        GL_VERTEX_SHADER,
-        "#version 130\n"
-        "\n"
-        "in vec4 position;\n"
-        "out vec2 texcoord;\n"
-        "\n"
-        "void main() {\n"
-        "    gl_Position = vec4(position.xy, 0.0f, 1.0f);\n"
-        "    texcoord = position.zw;\n"
-        "}\n"
-        "\n");
+        GL_VERTEX_SHADER, VERTEX_FILE_PATH);
 
     // TODO: why tf gl_FragCoord is vec4? Does it use z as part of the z-buffer?
     GLuint fragment_shader = gl_create_and_compile_shader(
-        GL_FRAGMENT_SHADER,
-        "#version 130\n"
-        "\n"
-        "in vec2 texcoord;\n"
-        "uniform sampler2D tex;\n"
-        "uniform vec2 position;\n"
-        "uniform vec2 direction;\n"
-        "\n"
-        "#define RADIUS 100.0f\n"
-        "#define TRAIL_COUNT 5\n"
-        "#define TRAIL_DIST RADIUS\n"
-        "#define TRAIL_RADIUS_DEC 20.0f\n"
-        "\n"
-        "void main() {\n"
-        "    float background_brighness = 0.1f;\n"
-        "    // gl_FragColor = mix(texture(tex, texcoord), vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.25f);\n"
-        "\n"
-        "    gl_FragColor = vec4(background_brighness,\n"
-        "                        background_brighness,\n"
-        "                        background_brighness,\n"
-        "                        1.0f);\n"
-        "\n"
-        "    for (int i = 0; i < TRAIL_COUNT; ++i) {\n"
-        "        float radius = RADIUS - TRAIL_RADIUS_DEC * i;\n"
-        "        vec2 actual_position = position - normalize(direction) * (i * TRAIL_DIST);\n"
-        "\n"
-        "        if (distance(gl_FragCoord.xy, actual_position) < radius) {\n"
-        "            gl_FragColor = vec4(1.0f, 0.5f, 0.5f, 1.0f);\n"
-        "            return;\n"
-        "        }\n"
-        "    }\n"
-        "}\n");
+        GL_FRAGMENT_SHADER, FRAGMENT_FILE_PATH);
 
     GLuint program = gl_create_and_link_program(vertex_shader, fragment_shader);
 
