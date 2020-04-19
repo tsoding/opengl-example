@@ -88,23 +88,6 @@ GLuint gl_create_and_compile_shader(GLenum shader_type, const char *file_path)
         GLchar message[MESSAGE_CAPACITY];
         glGetShaderInfoLog(shader, MESSAGE_CAPACITY, &log_length, message);
 
-        // FIXME: This is hackish Kapp
-        int q = 0;
-        for (int i = 0; i < log_length; ++i) {
-            if (!q) {
-                if (message[i] == '(') {
-                    message[i] = ':';
-                    q = 1;
-                }
-            } else {
-                if (message[i] == ')') {
-                    message[i] = ' ';
-                    break;
-                }
-                message[i] = ' ';
-            }
-        }
-
         fprintf(stderr, "%s failed compiled:\n", gl_shader_type_as_cstr(shader_type));
         fprintf(stderr, "%s:%.*s", file_path, log_length - 2, message + 2);
         abort();
