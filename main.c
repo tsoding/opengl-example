@@ -86,16 +86,17 @@ int main(int argc, char *argv[])
 
     glfwMakeContextCurrent(window);
 
-    glfwSetWindowSizeCallback(window, window_size_callback);
+    glfwSetFramebufferSizeCallback(window, window_size_callback);
+    glfwSwapInterval(1);
 
     float mesh[6][4] = {
         // position,    texcoord
-        {-0.5f, -0.5f, 0.0f, 1.0f},
-        { 0.5f, -0.5f, 1.0f, 1.0f},
-        { 0.5f,  0.5f, 1.0f, 0.0f},
-        { 0.5f,  0.5f, 1.0f, 0.0f},
-        {-0.5f,  0.5f, 0.0f, 0.0f},
-        {-0.5f, -0.5f, 0.0f, 1.0f},
+        {-1.0f, -1.0f, 0.0f, 1.0f},
+        { 1.0f, -1.0f, 1.0f, 1.0f},
+        { 1.0f,  1.0f, 1.0f, 0.0f},
+        { 1.0f,  1.0f, 1.0f, 0.0f},
+        {-1.0f,  1.0f, 0.0f, 0.0f},
+        {-1.0f, -1.0f, 0.0f, 1.0f},
     };
 
     const size_t mesh_count = sizeof(mesh) / sizeof(mesh[0]);
@@ -168,17 +169,40 @@ int main(int argc, char *argv[])
         "}\n"
         "\n");
 
+    // TODO: why tf gl_FragCoord is vec4? Does it use z as part of the z-buffer?
     GLuint fragment_shader = gl_create_and_compile_shader(
         GL_FRAGMENT_SHADER,
         "#version 130\n"
         "\n"
         "in vec2 texcoord;\n"
         "uniform sampler2D tex;\n"
+        "uniform vec2 position;\n"
+        "uniform vec2 direction;\n"
+        "\n"
+        "#define RADIUS 100.0f\n"
+        "#define TRAIL_COUNT 5\n"
+        "#define TRAIL_DIST RADIUS\n"
+        "#define TRAIL_RADIUS_DEC 20.0f\n"
         "\n"
         "void main() {\n"
-        "    gl_FragColor = mix(texture(tex, texcoord), vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.25f);\n"
-        "}\n"
-        "\n");
+        "    float background_brighness = 0.1f;\n"
+        "    // gl_FragColor = mix(texture(tex, texcoord), vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.25f);\n"
+        "\n"
+        "    gl_FragColor = vec4(background_brighness,\n"
+        "                        background_brighness,\n"
+        "                        background_brighness,\n"
+        "                        1.0f);\n"
+        "\n"
+        "    for (int i = 0; i < TRAIL_COUNT; ++i) {\n"
+        "        float radius = RADIUS - TRAIL_RADIUS_DEC * i;\n"
+        "        vec2 actual_position = position - normalize(direction) * (i * TRAIL_DIST);\n"
+        "\n"
+        "        if (distance(gl_FragCoord.xy, actual_position) < radius) {\n"
+        "            gl_FragColor = vec4(1.0f, 0.5f, 0.5f, 1.0f);\n"
+        "            return;\n"
+        "        }\n"
+        "    }\n"
+        "}\n");
 
     GLuint program = gl_create_and_link_program(vertex_shader, fragment_shader);
 
@@ -188,12 +212,36 @@ int main(int argc, char *argv[])
     glDeleteShader(fragment_shader);
     glUseProgram(program);
 
-    glUniform1i(glGetUniformLocation(program, "tex"), 0);
+    float r = 100.0f;
+    float x = 200.0f;
+    float y = 300.0f;
+    float dx = 200.0f;
+    float dy = 200.0f;
 
+    GLint position_location = glGetUniformLocation(program, "position");
+    GLint direction_location = glGetUniformLocation(program, "direction");
+
+    glUniform1i(glGetUniformLocation(program, "tex"), 0);
+    glUniform2f(position_location, x, y);
+    glUniform2f(direction_location, dx, dy);
+
+
+    int w, h;
+    glfwGetWindowSize(window, &w, &h);
+
+    const float dt = 1.0f / 60.0f;
     while (!glfwWindowShouldClose(window))
     {
         glClearColor(0.0, 0.0f, 0.75f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        if ((x - r) <= 0.0f || (x + r) >= (float) w) dx = -dx;
+        if ((y - r) <= 0.0f || (y + r) >= (float) h) dy = -dy;
+        x += dx * dt;
+        y += dy * dt;
+
+        glUniform2f(position_location, x, y);
+        glUniform2f(direction_location, dx, dy);
 
         glDrawArrays(GL_TRIANGLES, position_index, mesh_count);
 
