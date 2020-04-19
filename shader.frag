@@ -6,11 +6,12 @@ uniform vec2 position;
 uniform vec2 direction;
 uniform vec2 resolution;
 uniform float dt;
+uniform float RADIUS;
 
-#define RADIUS 100.0f
-#define TRAIL_COUNT 2
+#define TRAIL_COUNT 3
 #define TRAIL_DIST RADIUS
-#define TRAIL_RADIUS_DEC 20.0f
+#define TRAIL_RADIUS_DEC 10.0f
+
 
 void main() {
     float background_brighness = 0.1f;
@@ -29,9 +30,14 @@ void main() {
         float radius = RADIUS - TRAIL_RADIUS_DEC * i;
 
         vec2 d = gl_FragCoord.xy - pos;
+        float l = length(d);
         
-        if (dot(d, d) < radius * radius) {
-            gl_FragColor = vec4(0.5f, 1.0f, 0.5f, 1.0f);
+        if (l < radius) {
+            float r = l / radius;
+            d = normalize(d);
+            d.x *= 0.5;
+            d.y *= -0.5;
+            gl_FragColor = texture(tex, (d * r) + 0.5);
             return;
         }
 

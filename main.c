@@ -248,8 +248,8 @@ int main(int argc, char *argv[])
     glDeleteShader(fragment_shader);
     glUseProgram(program);
 
-    float r = 100.0f;
-    float x = 200.0f;
+    float r = 50.0f;
+    float x = 300.0f;
     float y = 300.0f;
     float dx = 200.0f;
     float dy = 200.0f;
@@ -258,6 +258,7 @@ int main(int argc, char *argv[])
     GLint direction_location = glGetUniformLocation(program, "direction");
     GLint resolution_location = glGetUniformLocation(program, "resolution");
     GLint dt_location = glGetUniformLocation(program, "dt");
+    GLint radius_location = glGetUniformLocation(program, "RADIUS");
 
     int w, h;
     glfwGetWindowSize(window, &w, &h);
@@ -268,6 +269,7 @@ int main(int argc, char *argv[])
     glUniform2f(direction_location, dx, dy);
     glUniform2f(resolution_location, (float) w, (float) h);
     glUniform1f(dt_location, dt);
+    glUniform1f(radius_location, r);
 
     while (!glfwWindowShouldClose(window))
     {
