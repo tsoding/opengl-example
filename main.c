@@ -256,18 +256,23 @@ int main(int argc, char *argv[])
 
     GLint position_location = glGetUniformLocation(program, "position");
     GLint direction_location = glGetUniformLocation(program, "direction");
-
-    glUniform1i(glGetUniformLocation(program, "tex"), 0);
-    glUniform2f(position_location, x, y);
-    glUniform2f(direction_location, dx, dy);
-
+    GLint resolution_location = glGetUniformLocation(program, "resolution");
+    GLint dt_location = glGetUniformLocation(program, "dt");
 
     int w, h;
     glfwGetWindowSize(window, &w, &h);
 
     const float dt = 1.0f / 60.0f;
+    glUniform1i(glGetUniformLocation(program, "tex"), 0);
+    glUniform2f(position_location, x, y);
+    glUniform2f(direction_location, dx, dy);
+    glUniform2f(resolution_location, (float) w, (float) h);
+    glUniform1f(dt_location, dt);
+
     while (!glfwWindowShouldClose(window))
     {
+        glfwGetWindowSize(window, &w, &h);
+
         glClearColor(0.0, 0.0f, 0.75f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -278,6 +283,8 @@ int main(int argc, char *argv[])
 
         glUniform2f(position_location, x, y);
         glUniform2f(direction_location, dx, dy);
+        glUniform2f(resolution_location, (float) w, (float) h);
+        glUniform1f(dt_location, dt);
 
         glDrawArrays(GL_TRIANGLES, position_index, mesh_count);
 
