@@ -12,6 +12,29 @@
 #define OPENGL_WIDTH 800
 #define OPENGL_HEIGHT 600
 
+uint8_t pixels[4 * OPENGL_WIDTH * OPENGL_HEIGHT];
+char frame_file_path[1024];
+
+void save_pixels_to_ppm_file(const char *file_path)
+{
+    FILE *f = fopen(file_path, "wb");
+    if (!f) {
+        fprintf(stderr, "Could not save to file `%s`: %s",
+                file_path, strerror(errno));
+        exit(1);
+    }
+
+    fprintf(f, "P6\n%d %d\n%d\n", OPENGL_WIDTH, OPENGL_HEIGHT, 255);
+    for (int y = 0; y < OPENGL_HEIGHT; ++y) {
+        for (int x = 0; x < OPENGL_WIDTH; ++x) {
+            fputc(pixels[(OPENGL_HEIGHT - y - 1) * OPENGL_WIDTH * 4 + x * 4 + 0], f);
+            fputc(pixels[(OPENGL_HEIGHT - y - 1) * OPENGL_WIDTH * 4 + x * 4 + 1], f);
+            fputc(pixels[(OPENGL_HEIGHT - y - 1) * OPENGL_WIDTH * 4 + x * 4 + 2], f);
+        }
+    }
+    fclose(f);
+}
+
 const char *gl_shader_type_as_cstr(GLenum shader_type)
 {
     switch (shader_type) {
@@ -254,8 +277,7 @@ int main(int argc, char *argv[])
     glUniform1f(dt_location, dt);
     glUniform1f(radius_location, r);
 
-    while (!glfwWindowShouldClose(window))
-    {
+    for (int i = 0; i < 100 && !glfwWindowShouldClose(window); ++i) {
         glfwGetWindowSize(window, &w, &h);
 
         glClearColor(0.0, 0.0f, 0.75f, 1.0f);
@@ -272,6 +294,17 @@ int main(int argc, char *argv[])
         glUniform1f(dt_location, dt);
 
         glDrawArrays(GL_TRIANGLES, position_index, mesh_count);
+
+
+#define OFFSCREEN
+#ifdef OFFSCREEN
+        glReadPixels(0, 0, OPENGL_WIDTH, OPENGL_HEIGHT,
+                     GL_RGBA, GL_UNSIGNED_BYTE,
+                     pixels);
+
+        snprintf(frame_file_path, sizeof(frame_file_path), "./frames/frame-%04d.ppm", i);
+        save_pixels_to_ppm_file(frame_file_path);
+#endif // OFFSCREEN
 
         glfwSwapBuffers(window);
         glfwPollEvents();
