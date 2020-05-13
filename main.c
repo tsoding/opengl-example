@@ -7,7 +7,8 @@
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLFW/glfw3.h>
 
-#include <png.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include "./stb_image.h"
 
 #define OPENGL_WIDTH 800
 #define OPENGL_HEIGHT 600
@@ -208,30 +209,14 @@ int main(int argc, char *argv[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     const char *image_filename = "./cakew.png";
-    png_image image = {};
-    image.version = PNG_IMAGE_VERSION;
-    if (!png_image_begin_read_from_file(&image, image_filename)) {
-        fprintf(stderr, "Could not read file `%s`: %s\n", image_filename, image.message);
-        abort();
-    }
-    image.format = PNG_FORMAT_RGBA;
-
-    uint32_t *image_pixels = malloc(sizeof(uint32_t) * image.width * image.height);
-    if (image_pixels == NULL) {
-        fprintf(stderr, "Could not allocate memory for an image\n");
-        abort();
-    }
-
-    if (!png_image_finish_read(&image, NULL, image_pixels, 0, NULL)) {
-        fprintf(stderr, "libpng pooped itself: %s\n", image.message);
-        abort();
-    }
+    int wi, hi, ni;
+    unsigned char *image_pixels = stbi_load(image_filename, &wi, &hi, &ni, 4);
 
     glTexImage2D(GL_TEXTURE_2D,
                  0,
                  GL_RGBA,
-                 image.width,
-                 image.height,
+                 wi,
+                 hi,
                  0,
                  GL_RGBA,
                  GL_UNSIGNED_BYTE,

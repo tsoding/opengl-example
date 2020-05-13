@@ -7,7 +7,7 @@ Was just checking out OpenGL. Nothing special.
 Debian:
 
 ```console
-$ sudo apt-get install libpng-dev libglfw3-dev
+$ sudo apt-get install libglfw3-dev
 ```
 
 ## Build
